@@ -113,19 +113,9 @@ abstract class AbstractDialectIntegrationTest {
         }
         if ("array_native".equals(tc.category())) {
             Assumptions.assumeTrue(dialect.supportsNativeArrays(), getDialectName() + ": no native array support");
-            // PostgreSQL requires parentheses around ARRAY constructor before indexing: (ARRAY[...])[i]
-            // The library generates ARRAY[...][i] which is a parser error for literal array constructors
-            Assumptions.assumeTrue(dialect.name() != DialectName.POSTGRESQL, "PostgreSQL: ARRAY constructor indexing requires parentheses");
-        }
-        if ("array_in".equals(tc.category())) {
-            // MySQL generates JSON_CONTAINS(JSON_ARRAY(...), CAST(name AS JSON)) but CAST(string AS JSON)
-            // fails for plain string column values — they're not valid JSON without quoting
-            Assumptions.assumeTrue(dialect.name() != DialectName.MYSQL, "MySQL: CAST(column AS JSON) fails for plain strings");
         }
         if ("comprehension".equals(tc.category())) {
             Assumptions.assumeTrue(dialect.name() != DialectName.MYSQL, "MySQL: comprehensions not supported");
-            Assumptions.assumeTrue(dialect.name() != DialectName.SQLITE, "SQLite: json_each alias incompatible with generated SQL");
-            Assumptions.assumeTrue(dialect.name() != DialectName.DUCKDB, "DuckDB: UNNEST AS alias creates table alias, not column name");
         }
     }
 

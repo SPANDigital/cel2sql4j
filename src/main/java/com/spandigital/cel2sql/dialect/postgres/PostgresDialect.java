@@ -139,16 +139,18 @@ public final class PostgresDialect implements Dialect, IndexAdvisor {
 
     @Override
     public void writeListIndex(StringBuilder w, SqlWriter writeArray, SqlWriter writeIndex) throws ConversionException {
+        w.append('(');
         writeArray.write();
-        w.append('[');
+        w.append(")[");
         writeIndex.write();
         w.append(" + 1]");
     }
 
     @Override
     public void writeListIndexConst(StringBuilder w, SqlWriter writeArray, long index) throws ConversionException {
+        w.append('(');
         writeArray.write();
-        w.append('[').append(index + 1).append(']');
+        w.append(")[").append(index + 1).append(']');
     }
 
     @Override
