@@ -66,7 +66,7 @@ public final class SqliteDialect implements Dialect, IndexAdvisor {
 
     @Override
     public void writeLikeEscape(StringBuilder w) {
-        w.append(" ESCAPE '\\\\'");
+        w.append(" ESCAPE '\\'");
     }
 
     @Override
