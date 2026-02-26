@@ -31,12 +31,12 @@ dependencies {
     api("dev.cel:compiler:0.9.1")
     api("dev.cel:runtime:0.9.1")
     implementation("com.google.guava:guava:33.4.0-jre")
-    implementation("org.slf4j:slf4j-api:2.0.16")
+    implementation("org.slf4j:slf4j-api:2.0.17")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("org.assertj:assertj-core:3.27.3")
-    testRuntimeOnly("org.slf4j:slf4j-simple:2.0.16")
+    testRuntimeOnly("org.slf4j:slf4j-simple:2.0.17")
 
     "integrationTestImplementation"(platform("org.testcontainers:testcontainers-bom:1.20.4"))
     "integrationTestImplementation"("org.testcontainers:junit-jupiter")
