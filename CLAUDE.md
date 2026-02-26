@@ -75,6 +75,42 @@ Tests use JUnit 5 parameterized tests with `@MethodSource` providing `Stream<Arg
 
 To add a new test case, add an `Arguments.of(testName, celExpression, expectedSql)` entry to the relevant `*Tests` method source stream.
 
+## CI/CD
+
+### CI (`ci.yml`)
+
+Runs on push to `main` and on PRs targeting `main`:
+- **Build matrix** — Java 17 and 21 (Temurin), runs `./gradlew build` (compile + unit tests)
+- **Integration tests** — runs after build succeeds, executes `./gradlew integrationTest` with PostgreSQL and MySQL via Testcontainers (Docker required on runner)
+- Test results uploaded as artifacts (14-day retention)
+
+### Release (`release.yml`)
+
+Triggered by pushing a tag matching `v*` (e.g. `v0.1.0`, `v1.0.0-rc1`):
+1. Validates tag format (`vX.Y.Z` or `vX.Y.Z-qualifier`)
+2. Runs unit tests
+3. Publishes to Maven Central via `com.vanniktech.maven.publish` plugin (`publishAndReleaseToMavenCentral`)
+4. Creates a GitHub Release with auto-generated release notes (tags with qualifier are marked as prerelease)
+
+Version is derived from the tag — the `v` prefix is stripped and passed as `ORG_GRADLE_PROJECT_VERSION_NAME`.
+
+### Cutting a Release
+
+```bash
+git tag -a v0.2.0 -m "Release v0.2.0 - description"
+git push origin v0.2.0
+gh run watch   # monitor the release workflow
+```
+
+### Required Secrets (org-level)
+
+| Secret | Purpose |
+|---|---|
+| `MAVEN_CENTRAL_USERNAME` | Sonatype Central Portal token username |
+| `MAVEN_CENTRAL_PASSWORD` | Sonatype Central Portal token password |
+| `GPG_SIGNING_KEY` | ASCII-armored GPG private key (RSA, not Ed25519 — Gradle's Bouncy Castle doesn't support newer key types) |
+| `GPG_SIGNING_PASSWORD` | Passphrase for the GPG key |
+
 ## CEL Java API Essentials
 
 The Java CEL library (`dev.cel`) differs from Go's `cel-go`:
