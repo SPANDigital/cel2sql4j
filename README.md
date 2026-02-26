@@ -4,6 +4,7 @@ A Java library that converts [CEL (Common Expression Language)](https://cel.dev/
 
 [![Java 17+](https://img.shields.io/badge/Java-17%2B-blue)](https://openjdk.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Maven Central](https://img.shields.io/maven-central/v/com.spandigital/cel2sql4j)](https://central.sonatype.com/artifact/com.spandigital/cel2sql4j)
 
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![MySQL](https://img.shields.io/badge/MySQL-4479A1?logo=mysql&logoColor=white)](https://www.mysql.com/)
