@@ -2099,8 +2099,7 @@ class Converter {
         CelExpr predicate = extractComprehensionPredicate(comp.loopCondition(), comp.loopStep());
 
         str.append("NOT EXISTS (SELECT 1 FROM ");
-        dialect.writeUnnest(str, () -> visit(iterRange));
-        str.append(" AS ").append(iterVar);
+        dialect.writeComprehensionSource(str, () -> visit(iterRange), iterVar);
         str.append(" WHERE NOT (");
         visit(predicate);
         str.append("))");
@@ -2116,8 +2115,7 @@ class Converter {
         CelExpr predicate = extractComprehensionPredicate(comp.loopCondition(), comp.loopStep());
 
         str.append("EXISTS (SELECT 1 FROM ");
-        dialect.writeUnnest(str, () -> visit(iterRange));
-        str.append(" AS ").append(iterVar);
+        dialect.writeComprehensionSource(str, () -> visit(iterRange), iterVar);
         str.append(" WHERE ");
         visit(predicate);
         str.append(')');
@@ -2133,8 +2131,7 @@ class Converter {
         CelExpr predicate = extractExistsOnePredicate(comp.loopStep());
 
         str.append("(SELECT COUNT(*) FROM ");
-        dialect.writeUnnest(str, () -> visit(iterRange));
-        str.append(" AS ").append(iterVar);
+        dialect.writeComprehensionSource(str, () -> visit(iterRange), iterVar);
         str.append(" WHERE ");
         visit(predicate);
         str.append(") = 1");
@@ -2153,8 +2150,7 @@ class Converter {
         visit(transform);
         dialect.writeArraySubqueryExprClose(str);
         str.append(" FROM ");
-        dialect.writeUnnest(str, () -> visit(iterRange));
-        str.append(" AS ").append(iterVar);
+        dialect.writeComprehensionSource(str, () -> visit(iterRange), iterVar);
         str.append(')');
     }
 
@@ -2171,8 +2167,7 @@ class Converter {
         str.append(iterVar);
         dialect.writeArraySubqueryExprClose(str);
         str.append(" FROM ");
-        dialect.writeUnnest(str, () -> visit(iterRange));
-        str.append(" AS ").append(iterVar);
+        dialect.writeComprehensionSource(str, () -> visit(iterRange), iterVar);
         str.append(" WHERE ");
         visit(predicate);
         str.append(')');

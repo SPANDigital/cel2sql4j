@@ -33,7 +33,7 @@ class Cel2SqlArrayTest {
         return Stream.of(
             // list_index_literal: array indexing only for PG/DuckDB/BQ
             Arguments.of("list_index_literal", "[1, 2, 3][0] == 1", "PostgreSQL", PG,
-                "ARRAY[1, 2, 3][1] = 1"),
+                "(ARRAY[1, 2, 3])[1] = 1"),
             Arguments.of("list_index_literal", "[1, 2, 3][0] == 1", "DuckDB", DUCKDB,
                 "[1, 2, 3][1] = 1"),
             Arguments.of("list_index_literal", "[1, 2, 3][0] == 1", "BigQuery", BQ,
@@ -51,7 +51,7 @@ class Cel2SqlArrayTest {
             Arguments.of("in_list", "name in [\"a\", \"b\", \"c\"]", "PostgreSQL", PG,
                 "name = ANY(ARRAY['a', 'b', 'c'])"),
             Arguments.of("in_list", "name in [\"a\", \"b\", \"c\"]", "MySQL", MYSQL,
-                "JSON_CONTAINS(JSON_ARRAY('a', 'b', 'c'), CAST(name AS JSON))"),
+                "JSON_OVERLAPS(JSON_ARRAY(name), JSON_ARRAY('a', 'b', 'c'))"),
             Arguments.of("in_list", "name in [\"a\", \"b\", \"c\"]", "SQLite", SQLITE,
                 "name IN (SELECT value FROM json_each(json_array('a', 'b', 'c')))"),
             Arguments.of("in_list", "name in [\"a\", \"b\", \"c\"]", "DuckDB", DUCKDB,

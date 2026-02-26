@@ -292,6 +292,13 @@ public final class SqliteDialect implements Dialect, IndexAdvisor {
     }
 
     @Override
+    public void writeComprehensionSource(StringBuilder w, SqlWriter writeSource, String iterVar) throws ConversionException {
+        w.append("(SELECT value AS ").append(iterVar).append(" FROM ");
+        writeUnnest(w, writeSource);
+        w.append(") AS _t");
+    }
+
+    @Override
     public void writeArraySubqueryOpen(StringBuilder w) {
         w.append("(SELECT json_group_array(");
     }

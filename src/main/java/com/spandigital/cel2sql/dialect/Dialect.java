@@ -136,6 +136,17 @@ public interface Dialect {
     /** Writes the UNNEST source for comprehensions. */
     void writeUnnest(StringBuilder w, SqlWriter writeSource) throws ConversionException;
 
+    /**
+     * Writes the comprehension source (UNNEST/json_each + alias) for subqueries.
+     * Default implementation calls {@link #writeUnnest} and appends {@code AS iterVar}.
+     * Dialects that need different aliasing (e.g. DuckDB column alias, SQLite derived table)
+     * should override this method.
+     */
+    default void writeComprehensionSource(StringBuilder w, SqlWriter writeSource, String iterVar) throws ConversionException {
+        writeUnnest(w, writeSource);
+        w.append(" AS ").append(iterVar);
+    }
+
     /** Writes the prefix before the transform expression in an array-building subquery. */
     void writeArraySubqueryOpen(StringBuilder w);
 

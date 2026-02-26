@@ -76,11 +76,11 @@ public final class MySqlDialect implements Dialect, IndexAdvisor {
 
     @Override
     public void writeArrayMembership(StringBuilder w, SqlWriter writeElem, SqlWriter writeArray) throws ConversionException {
-        w.append("JSON_CONTAINS(");
-        writeArray.write();
-        w.append(", CAST(");
+        w.append("JSON_OVERLAPS(JSON_ARRAY(");
         writeElem.write();
-        w.append(" AS JSON))");
+        w.append("), ");
+        writeArray.write();
+        w.append(')');
     }
 
     // --- Type Casting ---

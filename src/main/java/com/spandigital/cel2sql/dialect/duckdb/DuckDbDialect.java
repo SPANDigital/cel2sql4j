@@ -308,6 +308,12 @@ public final class DuckDbDialect implements Dialect, IndexAdvisor {
     }
 
     @Override
+    public void writeComprehensionSource(StringBuilder w, SqlWriter writeSource, String iterVar) throws ConversionException {
+        writeUnnest(w, writeSource);
+        w.append(" AS _t(").append(iterVar).append(')');
+    }
+
+    @Override
     public void writeArraySubqueryOpen(StringBuilder w) {
         w.append("ARRAY(SELECT ");
     }
