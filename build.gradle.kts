@@ -30,7 +30,7 @@ dependencies {
     api("dev.cel:cel:0.9.1")
     api("dev.cel:compiler:0.9.1")
     api("dev.cel:runtime:0.9.1")
-    implementation("com.google.guava:guava:33.4.0-jre")
+    implementation("com.google.guava:guava:33.5.0-jre")
     implementation("org.slf4j:slf4j-api:2.0.16")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
