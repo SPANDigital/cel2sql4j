@@ -42,3 +42,6 @@ out/
 # OS
 .DS_Store
 Thumbs.db
+
+# GPG
+secring.gpg

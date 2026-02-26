@@ -1,10 +1,11 @@
 plugins {
     java
     `java-library`
+    id("com.vanniktech.maven.publish") version "0.30.0"
 }
 
-group = "com.spandigital"
-version = "1.0.0-SNAPSHOT"
+group = property("GROUP") as String
+version = property("VERSION_NAME") as String
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -58,4 +59,12 @@ tasks.register<Test>("integrationTest") {
     classpath = sourceSets["integrationTest"].runtimeClasspath
     useJUnitPlatform()
     shouldRunAfter(tasks.test)
+}
+
+tasks.withType<Javadoc> {
+    (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:none", "-quiet")
+}
+
+mavenPublishing {
+    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
 }
