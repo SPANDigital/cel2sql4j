@@ -346,6 +346,18 @@ public final class SparkDialect implements Dialect, IndexAdvisor {
         w.append(')');
     }
 
+    @Override
+    public void writeFormat(StringBuilder w, String formatSpec, java.util.List<SqlWriter> writeArgs) throws ConversionException {
+        // Spark's format_string() is its printf-equivalent (supports %s/%d/%f directly).
+        w.append("format_string(");
+        writeStringLiteral(w, formatSpec);
+        for (SqlWriter arg : writeArgs) {
+            w.append(", ");
+            arg.write();
+        }
+        w.append(')');
+    }
+
     // --- Comprehensions ---
 
     @Override
