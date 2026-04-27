@@ -53,13 +53,17 @@ Each dialect package contains:
 - `XxxRegex.java` — RE2 → dialect-native regex conversion with ReDoS protection (except SQLite which doesn't support regex)
 
 Key dialect differences to be aware of:
-| Feature | PostgreSQL | MySQL | SQLite | DuckDB | BigQuery |
-|---|---|---|---|---|---|
-| Param style | `$N` | `?` | `?` | `$N` | `@pN` |
-| String concat | `\|\|` | `CONCAT()` | `\|\|` | `\|\|` | `\|\|` |
-| Array type | native | JSON | JSON | native | native |
-| Contains | `POSITION()` | `LOCATE()` | `INSTR()` | `CONTAINS()` | `STRPOS()` |
-| Regex | `~` / `~*` | `REGEXP` | unsupported | `~` / `~*` | `REGEXP_CONTAINS()` |
+| Feature | PostgreSQL | MySQL | SQLite | DuckDB | BigQuery | Spark |
+|---|---|---|---|---|---|---|
+| Param style | `$N` | `?` | `?` | `$N` | `@pN` | `?` |
+| String concat | `\|\|` | `CONCAT()` | `\|\|` | `\|\|` | `\|\|` | `concat()` |
+| Array type | native | JSON | JSON | native | native | native (`ARRAY<T>`) |
+| Contains | `POSITION()` | `LOCATE()` | `INSTR()` | `CONTAINS()` | `STRPOS()` | `LOCATE()` |
+| Regex | `~` / `~*` | `REGEXP` | unsupported | `~` / `~*` | `REGEXP_CONTAINS()` | `RLIKE` (Java regex) |
+| JSON access | `->>` | `->>'$.k'` | `json_extract` | `->>` | `JSON_VALUE` | `get_json_object` |
+| Index advisor | yes | yes | yes | yes | yes | n/a (storage-specific) |
+
+Spark notes: regex passes through unchanged (Spark's engine is `java.util.regex`, same as Java), array length uses `COALESCE(size(arr), 0)` so `size(null)` is 0, `getDayOfWeek` emits `(dayofweek(...) - 1)` to convert Spark's 1=Sunday convention to CEL's 0=Sunday convention. Index analysis is intentionally a no-op on Spark — `analyzeQuery` returns an empty recommendations list because indexing on Spark is storage-layer-specific (Delta Z-order vs Iceberg sort vs plain Parquet) and not portable.
 
 ### Error Handling
 

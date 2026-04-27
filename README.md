@@ -11,10 +11,11 @@ A Java library that converts [CEL (Common Expression Language)](https://cel.dev/
 [![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![DuckDB](https://img.shields.io/badge/DuckDB-FFF000?logo=duckdb&logoColor=black)](https://duckdb.org/)
 [![BigQuery](https://img.shields.io/badge/BigQuery-669DF6?logo=googlebigquery&logoColor=white)](https://cloud.google.com/bigquery)
+[![Spark](https://img.shields.io/badge/Apache%20Spark-E25A1C?logo=apachespark&logoColor=white)](https://spark.apache.org/)
 
 ## Features
 
-- **5 SQL dialects** &mdash; PostgreSQL, MySQL, SQLite, DuckDB, BigQuery
+- **6 SQL dialects** &mdash; PostgreSQL, MySQL, SQLite, DuckDB, BigQuery, Apache Spark
 - **Parameterized queries** &mdash; safe placeholder-based output to prevent SQL injection
 - **Index analysis** &mdash; dialect-specific index recommendations for your query patterns
 - **JSON/JSONB support** &mdash; field access, existence checks, array operations
@@ -85,6 +86,7 @@ import com.spandigital.cel2sql.dialect.sqlite.SqliteDialect;
 import com.spandigital.cel2sql.dialect.duckdb.DuckDbDialect;
 import com.spandigital.cel2sql.dialect.bigquery.BigQueryDialect;
 import com.spandigital.cel2sql.dialect.postgres.PostgresDialect;
+import com.spandigital.cel2sql.dialect.spark.SparkDialect;
 
 // PostgreSQL (default)
 String sql = Cel2Sql.convert(ast);
@@ -100,6 +102,9 @@ String sql = Cel2Sql.convert(ast, opts -> opts.withDialect(new DuckDbDialect()))
 
 // BigQuery
 String sql = Cel2Sql.convert(ast, opts -> opts.withDialect(new BigQueryDialect()));
+
+// Apache Spark
+String sql = Cel2Sql.convert(ast, opts -> opts.withDialect(new SparkDialect()));
 ```
 
 ### Parameterized Queries
@@ -178,6 +183,7 @@ String sql = Cel2Sql.convert(ast, opts -> opts
 | **SQLite** | `?, ?` | Not supported | JSON functions | `->`, `->>`, `json_` | BTREE |
 | **DuckDB** | `$1, $2` | `~` / `~*` (RE2) | `ANY()`, `UNNEST()` | `->`, `->>`, `json_` | ART |
 | **BigQuery** | `@p1, @p2` | `REGEXP_CONTAINS` | `UNNEST()`, arrays | `JSON_VALUE`, `JSON_QUERY` | CLUSTERING, SEARCH_INDEX |
+| **Apache Spark** | `?, ?` | `RLIKE` (Java regex) | `array()`, `array_contains` | `get_json_object`, `from_json` | storage-specific (none emitted) |
 
 ## CEL Expression Examples
 

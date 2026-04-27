@@ -8,7 +8,8 @@ public enum DialectName {
     MYSQL("mysql"),
     SQLITE("sqlite"),
     DUCKDB("duckdb"),
-    BIGQUERY("bigquery");
+    BIGQUERY("bigquery"),
+    SPARK("spark");
 
     private final String value;
 
