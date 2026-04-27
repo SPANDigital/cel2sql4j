@@ -306,6 +306,20 @@ public final class PostgresDialect implements Dialect, IndexAdvisor {
         w.append(", '')");
     }
 
+    @Override
+    public void writeFormat(StringBuilder w, String formatSpec, java.util.List<com.spandigital.cel2sql.dialect.SqlWriter> writeArgs) throws ConversionException {
+        // PostgreSQL's FORMAT() supports only %s (and %I/%L for identifiers/literals).
+        // Coerce CEL's %d/%f to %s so numeric args print correctly via implicit casting.
+        String pgSpec = formatSpec.replaceAll("%[df]", "%s");
+        w.append("FORMAT(");
+        writeStringLiteral(w, pgSpec);
+        for (com.spandigital.cel2sql.dialect.SqlWriter arg : writeArgs) {
+            w.append(", ");
+            arg.write();
+        }
+        w.append(')');
+    }
+
     // --- Comprehensions ---
 
     @Override

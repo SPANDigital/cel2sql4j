@@ -162,12 +162,69 @@ String sql = Cel2Sql.convert(ast, opts -> opts
 
 ```java
 String sql = Cel2Sql.convert(ast, opts -> opts
-    .withDialect(new MySqlDialect())     // SQL dialect (default: PostgreSQL)
-    .withSchemas(schemas)                 // Schema map for JSON field detection
-    .withMaxDepth(100)                    // Max AST recursion depth (default: 100)
-    .withMaxOutputLength(50000)           // Max SQL output length (default: 50,000)
-    .withLogger(myLogger));               // SLF4J logger for debugging
+    .withDialect(new MySqlDialect())                  // SQL dialect (default: PostgreSQL)
+    .withSchemas(schemas)                              // Schema map for JSON field detection
+    .withJsonVariables("context", "tags")             // Flat JSONB columns (use ->> instead of .)
+    .withColumnAliases(Map.of("name", "usr_name"))    // CEL identifier → SQL column rename
+    .withParamStartIndex(5)                            // Embed in larger query: starts at $5
+    .withMaxDepth(100)                                 // Max AST recursion depth (default: 100)
+    .withMaxOutputLength(50000)                        // Max SQL output length (default: 50,000)
+    .withLogger(myLogger));                            // SLF4J logger for debugging
 ```
+
+**Flat JSONB columns** &mdash; mark variables typed as JSONB columns so dot-access uses
+JSON operators rather than plain SQL dot notation:
+
+```java
+// CEL: context.host == "web-1"
+// Without:  context.host = 'web-1'
+// With withJsonVariables("context"):
+//           context->>'host' = 'web-1'
+```
+
+**Column aliases** &mdash; map user-facing CEL names to actual database column names
+(e.g. when columns are prefixed):
+
+```java
+String sql = Cel2Sql.convert(ast, opts -> opts
+    .withColumnAliases(Map.of("name", "usr_name", "active", "usr_active")));
+// CEL: name == "Alice" → SQL: usr_name = 'Alice'
+```
+
+**Parameter start index** &mdash; useful when embedding the generated SQL into a
+larger pre-parameterized query so placeholders don't clash:
+
+```java
+ConvertResult res = Cel2Sql.convertParameterized(ast, opts -> opts
+    .withParamStartIndex(5));
+// PostgreSQL: name = $5 AND age > $6
+// Caller appends res.parameters() to their args at positions 5+.
+```
+
+### Supported CEL Functions
+
+| Category | Functions |
+|---|---|
+| String predicates | `contains`, `startsWith`, `endsWith`, `matches`, `size` |
+| String manipulation | `lowerAscii`, `upperAscii`, `trim`, `charAt`, `indexOf`, `lastIndexOf`, `substring`, `replace`, `reverse`, `split`, `join`, `format` |
+| Type conversion | `bool`, `bytes`, `double`, `int`, `string`, `duration`, `timestamp` |
+| Timestamp extraction | `getFullYear`, `getMonth`, `getDate`, `getDayOfMonth`, `getDayOfYear`, `getDayOfWeek`, `getHours`, `getMinutes`, `getSeconds`, `getMilliseconds` |
+| Comprehensions | `all`, `exists`, `exists_one`, `map`, `filter` |
+
+> **Note on `format()`** &mdash; supported on PostgreSQL (via `FORMAT()`), BigQuery (via `FORMAT()`),
+> SQLite and DuckDB (via `printf()`). MySQL throws because it has no printf-style FORMAT.
+> Only `%s`, `%d`, `%f` specifiers are accepted; format strings are bounded to 1000 characters.
+
+### Resource Limits
+
+cel2sql4j enforces several caps to keep generated SQL safe and bounded:
+
+| Limit | Default | Configurable | Purpose |
+|---|---|---|---|
+| Recursion depth | 100 | `withMaxDepth(int)` | Prevent stack overflow on deeply nested CEL |
+| SQL output length | 50 000 chars | `withMaxOutputLength(int)` | Cap total generated SQL size |
+| Byte literal length (inline mode) | 10 000 bytes | constant | Prevent CWE-400 hex expansion (parameterized mode bypasses this — bytes go straight to JDBC) |
+| `format()` string length | 1 000 chars | constant | Bound expansion in formatted SQL |
 
 ## Supported Dialects
 

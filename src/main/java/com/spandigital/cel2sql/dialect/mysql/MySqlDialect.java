@@ -290,6 +290,16 @@ public final class MySqlDialect implements Dialect, IndexAdvisor {
         w.append(')');
     }
 
+    @Override
+    public void writeFormat(StringBuilder w, String formatSpec, java.util.List<SqlWriter> writeArgs) throws ConversionException {
+        // MySQL has no printf-style FORMAT(); FORMAT(N, decimals) formats numbers only.
+        // Rather than emit incorrect SQL, fail explicitly so callers know to handle
+        // the formatting in application code or pick a different dialect.
+        throw ConversionException.of(
+                "Unsupported operation",
+                "format() is not supported in MySQL: MySQL has no printf-style FORMAT function");
+    }
+
     // --- Comprehensions ---
 
     @Override

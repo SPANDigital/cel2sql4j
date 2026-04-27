@@ -131,6 +131,16 @@ public interface Dialect {
     /** Writes an array join expression. */
     void writeJoin(StringBuilder w, SqlWriter writeArray, SqlWriter writeDelim) throws ConversionException;
 
+    /**
+     * Writes a string format expression. The format string has already been validated and
+     * translated to dialect-native syntax; the args must be visited in order via {@code writeArgs}.
+     *
+     * @param w           the output buffer
+     * @param formatSpec  dialect-native format string (already validated and quoted as a literal)
+     * @param writeArgs   list of writers, one per argument, to be emitted comma-separated after the format spec
+     */
+    void writeFormat(StringBuilder w, String formatSpec, java.util.List<SqlWriter> writeArgs) throws ConversionException;
+
     // --- Comprehensions ---
 
     /** Writes the UNNEST source for comprehensions. */

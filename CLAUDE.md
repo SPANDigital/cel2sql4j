@@ -69,6 +69,15 @@ Key dialect differences to be aware of:
 
 `FieldSchema` (record) and `Schema` describe table columns for JSON/JSONB field detection. Passed via `ConvertOptions.withSchemas()`. When schemas are absent, the converter treats all fields as plain columns.
 
+`ConvertOptions.withJsonVariables(String...)` is an alternative for **flat JSONB columns** — when no nested table schema is available, mark a variable name as a JSONB column and any dot/bracket access on it emits `->>` text-extraction operators (e.g. `context.host` → `context->>'host'`). `withColumnAliases(Map)` rewrites CEL identifier names to differently-named DB columns at emit time (alias values are validated against the dialect's identifier rules). `withParamStartIndex(int)` shifts the placeholder counter so a generated CEL fragment can be embedded in a larger pre-parameterized query.
+
+### Differences from upstream `cel2sql` (Go)
+
+- **No name-based numeric cast heuristic.** Upstream removed (in v3.7.1) a heuristic that auto-cast identifiers like `score`, `value`, `count` to `numeric`. cel2sql4j has never had that heuristic — explicit `int(x)`/`double(x)` casts are required.
+- **Single `ConversionException` instead of 16 sentinel errors.** Upstream exports `ErrUnsupportedExpression`, `ErrInvalidFieldName`, etc. for `errors.Is`. The Java port uses one exception class with `userMessage` (safe for end users) and `internalDetails` (for logs) — CWE-209 pattern.
+- **No JDBC schema loaders.** Upstream ships per-dialect `*/provider.go` packages that introspect a live JDBC connection to build `Schema` objects. cel2sql4j users construct `Schema` directly from application metadata.
+- **`format()` is dialect-restricted.** PostgreSQL/BigQuery use `FORMAT()`; SQLite/DuckDB use `printf()`; MySQL throws — it has no portable printf-style equivalent. Only `%s`, `%d`, `%f` are accepted.
+
 ## Test Patterns
 
 Tests use JUnit 5 parameterized tests with `@MethodSource` providing `Stream<Arguments>`. The `CelHelper` utility class provides a `standardCompiler()` pre-loaded with common variable declarations (name:string, age:int, adult:bool, etc.) and `compile(celExpr)` to get a checked AST.
