@@ -5,6 +5,7 @@ import com.spandigital.cel2sql.dialect.bigquery.BigQueryDialect;
 import com.spandigital.cel2sql.dialect.duckdb.DuckDbDialect;
 import com.spandigital.cel2sql.dialect.mysql.MySqlDialect;
 import com.spandigital.cel2sql.dialect.postgres.PostgresDialect;
+import com.spandigital.cel2sql.dialect.spark.SparkDialect;
 import com.spandigital.cel2sql.dialect.sqlite.SqliteDialect;
 import com.spandigital.cel2sql.error.ConversionException;
 import com.spandigital.cel2sql.testutil.CelHelper;
@@ -42,6 +43,7 @@ class Cel2SqlOptionsTest {
     private static final Dialect SQLITE = new SqliteDialect();
     private static final Dialect DUCKDB = new DuckDbDialect();
     private static final Dialect BQ = new BigQueryDialect();
+    private static final Dialect SPARK = new SparkDialect();
 
     // ------------------------------------------------------------------
     // withColumnAliases
@@ -208,6 +210,8 @@ class Cel2SqlOptionsTest {
                     "SQLite", SQLITE, "printf('%s is %d', 'John', 30)"),
             Arguments.of("format_string_int", "\"%s is %d\".format([\"John\", 30])",
                     "DuckDB", DUCKDB, "printf('%s is %d', 'John', 30)"),
+            Arguments.of("format_string_int", "\"%s is %d\".format([\"John\", 30])",
+                    "Spark", SPARK, "format_string('%s is %d', 'John', 30)"),
             Arguments.of("format_no_args", "\"hello\".format([])",
                     "PostgreSQL", PG, "FORMAT('hello')"),
             Arguments.of("format_double_percent", "\"100%% sure\".format([])",
