@@ -9,17 +9,15 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.List;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Apache Spark SQL dialect tests. Mirrors the upstream Go {@code dialect/spark}
- * test cases: RLIKE for regex, array_contains for membership, size+COALESCE for
- * length, get_json_object for JSON access, and the dayofweek - 1 adjustment
- * for {@code getDayOfWeek}.
+ * Apache Spark SQL dialect tests. Test cases covered: RLIKE for regex,
+ * {@code array_contains} for membership, {@code size} + {@code COALESCE} for length,
+ * and the {@code dayofweek - 1} adjustment for {@code getDayOfWeek}.
  */
 class Cel2SqlSparkTest {
 
@@ -132,6 +130,20 @@ class Cel2SqlSparkTest {
         var res = spark.convertRegex("(?i)Hello");
         assertThat(res.pattern()).isEqualTo("(?i)Hello");
         assertThat(res.caseInsensitive()).isFalse();
+    }
+
+    @Test
+    void jsonArrayMembershipThrowsClearly() throws Exception {
+        // A scalar subquery built from EXPLODE(from_json(...)) can return multiple
+        // rows, which Spark rejects at runtime. The dialect throws at conversion
+        // time so users get a clear diagnostic instead of an opaque runtime error.
+        SparkDialect spark = new SparkDialect();
+        StringBuilder sb = new StringBuilder();
+        assertThatThrownBy(() -> spark.writeJSONArrayMembership(sb, "any", () -> sb.append("x")))
+                .isInstanceOf(ConversionException.class);
+        StringBuilder sb2 = new StringBuilder();
+        assertThatThrownBy(() -> spark.writeNestedJSONArrayMembership(sb2, () -> sb2.append("x")))
+                .isInstanceOf(ConversionException.class);
     }
 
     static Stream<Arguments> sparkInListTests() {

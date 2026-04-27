@@ -224,19 +224,38 @@ public final class SparkDialect implements Dialect, IndexAdvisor {
         w.append("') IS NOT NULL");
     }
 
+    /**
+     * JSON array membership ({@code elem in jsonArrayField}) is not supported on Spark.
+     *
+     * <p>The converter emits {@code lhs = <subquery>} for this construct, and a
+     * scalar subquery built from {@code EXPLODE(from_json(...))} can return
+     * multiple rows — Spark rejects that at runtime with a strict scalar-subquery
+     * error. The dialect contract here does not provide the candidate element,
+     * so we cannot rewrite to a boolean predicate (e.g.
+     * {@code array_contains(from_json(...), elem)}). Throwing at conversion time
+     * is preferable to emitting SQL that fails at execution.</p>
+     *
+     * <p>Workaround: when the column is typed as a native {@code ARRAY<T>}
+     * (rather than a JSON string parsed via {@code from_json}), the standard
+     * array-membership path ({@link #writeArrayMembership}) is used and emits
+     * {@code array_contains(arr, elem)}, which works correctly.</p>
+     */
     @Override
     public void writeJSONArrayMembership(StringBuilder w, String jsonFunc, SqlWriter writeExpr) throws ConversionException {
-        // Mirrors SQLite's `lhs = (SELECT value FROM json_each(...))` pattern.
-        w.append("(SELECT col FROM (SELECT EXPLODE(from_json(");
-        writeExpr.write();
-        w.append(", 'ARRAY<STRING>')) AS col) t)");
+        throw ConversionException.of(
+                "Unsupported operation",
+                "Spark JSON array membership requires a boolean predicate (array_contains/EXISTS); "
+                        + "the dialect contract does not provide the candidate element to build one. "
+                        + "Use a typed ARRAY<T> column or rewrite the expression in application code.");
     }
 
     @Override
     public void writeNestedJSONArrayMembership(StringBuilder w, SqlWriter writeExpr) throws ConversionException {
-        w.append("(SELECT col FROM (SELECT EXPLODE(from_json(");
-        writeExpr.write();
-        w.append(", 'ARRAY<STRING>')) AS col) t)");
+        throw ConversionException.of(
+                "Unsupported operation",
+                "Spark nested JSON array membership requires a boolean predicate (array_contains/EXISTS); "
+                        + "the dialect contract does not provide the candidate element to build one. "
+                        + "Use a typed ARRAY<T> column or rewrite the expression in application code.");
     }
 
     // --- Timestamps ---
