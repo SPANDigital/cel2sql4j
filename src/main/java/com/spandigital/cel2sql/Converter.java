@@ -127,7 +127,6 @@ class Converter {
 
     // Format strings are bounded to keep generated SQL small. Mirrors upstream cel2sql.
     static final int MAX_FORMAT_STRING_LENGTH = 1000;
-    private static final Pattern FORMAT_SPECIFIER = Pattern.compile("%([sdf])");
 
     // ========================================================================
     // Operator Precedence Map
@@ -1693,18 +1692,20 @@ class Converter {
         CelExpr formatExpr;
         CelExpr argsExpr;
         if (call.target().isPresent()) {
+            // Member form: "fmt".format(argsList) — exactly one argument expected.
             formatExpr = call.target().get();
-            if (call.args().isEmpty()) {
+            if (call.args().size() != 1) {
                 throw new ConversionException(ErrorMessages.INVALID_ARGUMENTS,
-                        "format() requires an argument list");
+                        "format() requires exactly one argument list, got " + call.args().size());
             }
             argsExpr = call.args().get(0);
-        } else if (call.args().size() >= 2) {
+        } else if (call.args().size() == 2) {
+            // Free form: format(fmt, argsList) — exactly two arguments expected.
             formatExpr = call.args().get(0);
             argsExpr = call.args().get(1);
         } else {
             throw new ConversionException(ErrorMessages.INVALID_ARGUMENTS,
-                    "format() requires a format string and arguments");
+                    "format() requires a format string and exactly one arguments list");
         }
 
         if (!isStringLiteral(formatExpr)) {

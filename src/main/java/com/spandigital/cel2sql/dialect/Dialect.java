@@ -132,11 +132,14 @@ public interface Dialect {
     void writeJoin(StringBuilder w, SqlWriter writeArray, SqlWriter writeDelim) throws ConversionException;
 
     /**
-     * Writes a string format expression. The format string has already been validated and
-     * translated to dialect-native syntax; the args must be visited in order via {@code writeArgs}.
+     * Writes a string format expression. The format string has already been validated against
+     * cel2sql's accepted specifiers ({@code %s}, {@code %d}, {@code %f}). Implementations
+     * should render {@code formatSpec} as a string literal using the dialect's normal
+     * literal-escaping rules (e.g. via {@link #writeStringLiteral}), then emit the argument
+     * writers comma-separated.
      *
      * @param w           the output buffer
-     * @param formatSpec  dialect-native format string (already validated and quoted as a literal)
+     * @param formatSpec  format string value, unquoted and already validated
      * @param writeArgs   list of writers, one per argument, to be emitted comma-separated after the format spec
      */
     void writeFormat(StringBuilder w, String formatSpec, java.util.List<SqlWriter> writeArgs) throws ConversionException;

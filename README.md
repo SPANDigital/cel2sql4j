@@ -162,7 +162,7 @@ String sql = Cel2Sql.convert(ast, opts -> opts
 
 ```java
 String sql = Cel2Sql.convert(ast, opts -> opts
-    .withDialect(new MySqlDialect())                  // SQL dialect (default: PostgreSQL)
+    .withDialect(new PostgresDialect())               // SQL dialect (default: PostgreSQL)
     .withSchemas(schemas)                              // Schema map for JSON field detection
     .withJsonVariables("context", "tags")             // Flat JSONB columns (use ->> instead of .)
     .withColumnAliases(Map.of("name", "usr_name"))    // CEL identifier → SQL column rename
