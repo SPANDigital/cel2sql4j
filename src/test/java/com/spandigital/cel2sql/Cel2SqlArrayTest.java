@@ -45,7 +45,7 @@ class Cel2SqlArrayTest {
             Arguments.of("size_list", "size(string_list)", "DuckDB", DUCKDB,
                 "COALESCE(array_length(string_list), 0)"),
             Arguments.of("size_list", "size(string_list)", "BigQuery", BQ,
-                "ARRAY_LENGTH(string_list)"),
+                "COALESCE(ARRAY_LENGTH(string_list), 0)"),
 
             // in_list: all 5 dialects with different containment syntax
             Arguments.of("in_list", "name in [\"a\", \"b\", \"c\"]", "PostgreSQL", PG,
@@ -65,7 +65,7 @@ class Cel2SqlArrayTest {
             Arguments.of("size_list_var_method", "string_list.size()", "DuckDB", DUCKDB,
                 "COALESCE(array_length(string_list), 0)"),
             Arguments.of("size_list_var_method", "string_list.size()", "BigQuery", BQ,
-                "ARRAY_LENGTH(string_list)")
+                "COALESCE(ARRAY_LENGTH(string_list), 0)")
         );
     }
 

@@ -298,6 +298,18 @@ public final class DuckDbDialect implements Dialect, IndexAdvisor {
         w.append(')');
     }
 
+    @Override
+    public void writeFormat(StringBuilder w, String formatSpec, java.util.List<SqlWriter> writeArgs) throws ConversionException {
+        // DuckDB's printf() supports C-style %s/%d/%f directly.
+        w.append("printf(");
+        writeStringLiteral(w, formatSpec);
+        for (SqlWriter arg : writeArgs) {
+            w.append(", ");
+            arg.write();
+        }
+        w.append(')');
+    }
+
     // --- Comprehensions ---
 
     @Override

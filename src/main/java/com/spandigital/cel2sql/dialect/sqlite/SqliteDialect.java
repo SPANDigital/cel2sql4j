@@ -282,6 +282,18 @@ public final class SqliteDialect implements Dialect, IndexAdvisor {
         throw ConversionException.of("Unsupported operation", "array join is not supported in SQLite");
     }
 
+    @Override
+    public void writeFormat(StringBuilder w, String formatSpec, java.util.List<SqlWriter> writeArgs) throws ConversionException {
+        // SQLite's printf() supports C-style %s/%d/%f directly.
+        w.append("printf(");
+        writeStringLiteral(w, formatSpec);
+        for (SqlWriter arg : writeArgs) {
+            w.append(", ");
+            arg.write();
+        }
+        w.append(')');
+    }
+
     // --- Comprehensions ---
 
     @Override

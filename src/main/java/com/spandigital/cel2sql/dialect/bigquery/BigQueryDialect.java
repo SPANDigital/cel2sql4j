@@ -131,9 +131,11 @@ public final class BigQueryDialect implements Dialect, IndexAdvisor {
 
     @Override
     public void writeArrayLength(StringBuilder w, int dimension, SqlWriter writeExpr) throws ConversionException {
-        w.append("ARRAY_LENGTH(");
+        // Wrap in COALESCE so size(arr) > 0 correctly excludes NULL arrays
+        // (matches PostgreSQL/MySQL/SQLite/DuckDB behavior).
+        w.append("COALESCE(ARRAY_LENGTH(");
         writeExpr.write();
-        w.append(')');
+        w.append("), 0)");
     }
 
     @Override
@@ -186,9 +188,9 @@ public final class BigQueryDialect implements Dialect, IndexAdvisor {
 
     @Override
     public void writeJSONArrayLength(StringBuilder w, SqlWriter writeExpr) throws ConversionException {
-        w.append("ARRAY_LENGTH(JSON_QUERY_ARRAY(");
+        w.append("COALESCE(ARRAY_LENGTH(JSON_QUERY_ARRAY(");
         writeExpr.write();
-        w.append("))");
+        w.append(")), 0)");
     }
 
     @Override
@@ -303,6 +305,18 @@ public final class BigQueryDialect implements Dialect, IndexAdvisor {
             writeDelim.write();
         } else {
             w.append("''");
+        }
+        w.append(')');
+    }
+
+    @Override
+    public void writeFormat(StringBuilder w, String formatSpec, java.util.List<SqlWriter> writeArgs) throws ConversionException {
+        // BigQuery FORMAT() accepts C-style %s, %d, %f — pass through unchanged.
+        w.append("FORMAT(");
+        writeStringLiteral(w, formatSpec);
+        for (SqlWriter arg : writeArgs) {
+            w.append(", ");
+            arg.write();
         }
         w.append(')');
     }

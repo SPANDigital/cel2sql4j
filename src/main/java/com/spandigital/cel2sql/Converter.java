@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -122,6 +123,10 @@ class Converter {
     static final String REVERSE = "reverse";
     static final String SPLIT = "split";
     static final String JOIN = "join";
+    static final String FORMAT = "format";
+
+    // Format strings are bounded to keep generated SQL small. Mirrors upstream cel2sql.
+    static final int MAX_FORMAT_STRING_LENGTH = 1000;
 
     // ========================================================================
     // Operator Precedence Map
@@ -196,10 +201,19 @@ class Converter {
     private final int maxDepth;
     private final int maxOutputLength;
     private final boolean parameterize;
+    private final Set<String> jsonVariables;
+    private final Map<String, String> columnAliases;
     private final List<Object> parameters = new ArrayList<>();
     private int depth = 0;
     private int comprehensionDepth = 0;
-    private int paramCount = 0;
+    private int paramCount;
+
+    // Maximum length of a byte literal that may be inlined into SQL. Each
+    // byte expands to roughly 4 characters (e.g. \xDE), so 10 000 bytes ≈ 40 KB
+    // of generated SQL. Mirrors upstream cel2sql's maxByteArrayLength constant
+    // (CWE-400 — uncontrolled resource consumption). The check is bypassed in
+    // parameterized mode since bytes are sent directly to the JDBC driver.
+    static final int MAX_BYTE_ARRAY_LENGTH = 10_000;
 
     // ========================================================================
     // Constructor
@@ -213,6 +227,10 @@ class Converter {
         this.maxDepth = options.maxDepth();
         this.maxOutputLength = options.maxOutputLength();
         this.parameterize = parameterize;
+        this.jsonVariables = options.jsonVariables();
+        this.columnAliases = options.columnAliases();
+        // paramCount is incremented before use, so start one below the configured index.
+        this.paramCount = options.paramStartIndex() - 1;
     }
 
     // ========================================================================
@@ -559,6 +577,12 @@ class Converter {
                 if (parameterize) {
                     writeParam(bytes);
                 } else {
+                    if (bytes.length > MAX_BYTE_ARRAY_LENGTH) {
+                        throw new ConversionException(
+                                ErrorMessages.CONVERSION_FAILED,
+                                "byte literal length " + bytes.length
+                                        + " exceeds maximum of " + MAX_BYTE_ARRAY_LENGTH);
+                    }
                     dialect.writeBytesLiteral(str, bytes);
                 }
             }
@@ -583,9 +607,17 @@ class Converter {
 
     /**
      * Visits an identifier expression, validates it, and writes the SQL identifier.
+     * If the identifier matches a key in the column-alias map, the alias is
+     * emitted instead (validated against the dialect's identifier rules).
      */
     private void visitIdent(CelExpr expr) throws ConversionException {
         String name = expr.ident().name();
+        String alias = columnAliases.get(name);
+        if (alias != null) {
+            dialect.validateFieldName(alias);
+            str.append(alias);
+            return;
+        }
         dialect.validateFieldName(name);
         str.append(name);
     }
@@ -1198,6 +1230,7 @@ class Converter {
             case REVERSE -> callReverse(expr);
             case SPLIT -> callSplit(expr);
             case JOIN -> callJoin(expr);
+            case FORMAT -> callFormat(expr);
             case TYPE_CONVERT_BOOL, TYPE_CONVERT_BYTES, TYPE_CONVERT_DOUBLE,
                  TYPE_CONVERT_INT, TYPE_CONVERT_STRING, TYPE_CONVERT_UINT -> callCasting(expr);
             case TYPE_CONVERT_DURATION -> callDuration(expr);
@@ -1647,6 +1680,87 @@ class Converter {
             CelExpr delim = call.args().get(0);
             dialect.writeJoin(str, () -> visit(target), () -> visit(delim));
         }
+    }
+
+    /**
+     * Converts {@code "fmt".format([args...])} to the dialect's format function.
+     * Mirrors upstream cel2sql: format string must be a constant, args must be a
+     * list literal, only %s/%d/%f are supported, length is bounded.
+     */
+    private void callFormat(CelExpr expr) throws ConversionException {
+        CelCall call = expr.call();
+        CelExpr formatExpr;
+        CelExpr argsExpr;
+        if (call.target().isPresent()) {
+            // Member form: "fmt".format(argsList) — exactly one argument expected.
+            formatExpr = call.target().get();
+            if (call.args().size() != 1) {
+                throw new ConversionException(ErrorMessages.INVALID_ARGUMENTS,
+                        "format() requires exactly one argument list, got " + call.args().size());
+            }
+            argsExpr = call.args().get(0);
+        } else if (call.args().size() == 2) {
+            // Free form: format(fmt, argsList) — exactly two arguments expected.
+            formatExpr = call.args().get(0);
+            argsExpr = call.args().get(1);
+        } else {
+            throw new ConversionException(ErrorMessages.INVALID_ARGUMENTS,
+                    "format() requires a format string and exactly one arguments list");
+        }
+
+        if (!isStringLiteral(formatExpr)) {
+            throw new ConversionException(ErrorMessages.UNSUPPORTED_EXPRESSION,
+                    "format() requires a constant format string");
+        }
+        String formatString = formatExpr.constant().stringValue();
+        if (formatString.length() > MAX_FORMAT_STRING_LENGTH) {
+            throw new ConversionException(ErrorMessages.INVALID_ARGUMENTS,
+                    "format() format string exceeds maximum length of " + MAX_FORMAT_STRING_LENGTH);
+        }
+
+        // Validate that every '%' begins a supported specifier (%%, %s, %d, %f).
+        int placeholderCount = countAndValidateSpecifiers(formatString);
+
+        if (argsExpr.getKind() != Kind.LIST) {
+            throw new ConversionException(ErrorMessages.UNSUPPORTED_EXPRESSION,
+                    "format() requires a constant list of arguments");
+        }
+        List<CelExpr> argElements = argsExpr.list().elements();
+        if (argElements.size() != placeholderCount) {
+            throw new ConversionException(ErrorMessages.INVALID_ARGUMENTS,
+                    "format() argument count mismatch: format has " + placeholderCount
+                            + " placeholders but got " + argElements.size() + " arguments");
+        }
+
+        List<com.spandigital.cel2sql.dialect.SqlWriter> writers = new ArrayList<>(argElements.size());
+        for (CelExpr arg : argElements) {
+            writers.add(() -> visit(arg));
+        }
+        dialect.writeFormat(str, formatString, writers);
+    }
+
+    private static int countAndValidateSpecifiers(String fmt) throws ConversionException {
+        int count = 0;
+        for (int i = 0; i < fmt.length(); i++) {
+            char c = fmt.charAt(i);
+            if (c != '%') continue;
+            if (i + 1 >= fmt.length()) {
+                throw new ConversionException(ErrorMessages.INVALID_ARGUMENTS,
+                        "format() format string ends with '%'");
+            }
+            char next = fmt.charAt(i + 1);
+            if (next == '%') {
+                i++;  // literal percent
+                continue;
+            }
+            if (next != 's' && next != 'd' && next != 'f') {
+                throw new ConversionException(ErrorMessages.INVALID_ARGUMENTS,
+                        "format() unsupported specifier '%" + next + "': only %s, %d, %f are allowed");
+            }
+            count++;
+            i++;
+        }
+        return count;
     }
 
     // ========================================================================
@@ -2259,9 +2373,20 @@ class Converter {
 
     /**
      * Determines if a select expression should use JSON path access.
-     * Returns true if the expression accesses a field declared as JSON/JSONB in the schema.
+     * Returns true when:
+     * <ul>
+     *   <li>the chain's root identifier was declared as a flat JSONB variable
+     *       via {@link ConvertOptions#withJsonVariables(String...)}, or</li>
+     *   <li>the expression accesses a field declared as JSON/JSONB in the schema.</li>
+     * </ul>
      */
     private boolean shouldUseJSONPath(CelExpr expr) {
+        // Flat JSONB variables: any access whose root ident is in jsonVariables.
+        // Covers both dot-notation (SELECT) and bracket-notation (CALL with @index).
+        String root = getRootIdentName(expr);
+        if (root != null && jsonVariables.contains(root)) {
+            return true;
+        }
         if (schemas == null || schemas.isEmpty()) return false;
         if (expr.getKind() != Kind.SELECT) return false;
 
@@ -2274,9 +2399,36 @@ class Converter {
     }
 
     /**
+     * Walks the access chain (SELECT operand or @index args[0]) up to the
+     * root identifier and returns its name, or null if the root isn't an ident.
+     */
+    private String getRootIdentName(CelExpr expr) {
+        CelExpr cur = expr;
+        while (cur != null) {
+            switch (cur.getKind()) {
+                case IDENT -> { return cur.ident().name(); }
+                case SELECT -> cur = cur.select().operand();
+                case CALL -> {
+                    CelCall call = cur.call();
+                    if (INDEX.equals(call.function()) && !call.args().isEmpty()) {
+                        cur = call.args().get(0);
+                    } else {
+                        return null;
+                    }
+                }
+                default -> { return null; }
+            }
+        }
+        return null;
+    }
+
+    /**
      * Checks if the expression chain contains a JSON field access.
      */
     private boolean hasJSONFieldInChain(CelExpr expr) {
+        // Flat JSONB variable at the root counts as a JSON field for this check.
+        String root = getRootIdentName(expr);
+        if (root != null && jsonVariables.contains(root)) return true;
         if (expr.getKind() != Kind.SELECT) return false;
         if (shouldUseJSONPath(expr)) return true;
         return hasJSONFieldInChain(expr.select().operand());
