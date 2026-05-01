@@ -43,7 +43,7 @@ dependencies {
     "integrationTestImplementation"("org.testcontainers:postgresql")
     "integrationTestImplementation"("org.testcontainers:mysql")
     "integrationTestImplementation"("org.postgresql:postgresql:42.7.11")
-    "integrationTestImplementation"("com.mysql:mysql-connector-j:9.2.0")
+    "integrationTestImplementation"("com.mysql:mysql-connector-j:9.7.0")
     "integrationTestImplementation"("org.xerial:sqlite-jdbc:3.47.2.0")
     "integrationTestImplementation"("org.duckdb:duckdb_jdbc:1.5.2.1")
 
