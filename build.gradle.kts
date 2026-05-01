@@ -1,7 +1,7 @@
 plugins {
     java
     `java-library`
-    id("com.vanniktech.maven.publish") version "0.30.0"
+    id("com.vanniktech.maven.publish") version "0.36.0"
 }
 
 group = property("GROUP") as String
@@ -72,5 +72,5 @@ tasks.withType<Javadoc> {
 }
 
 mavenPublishing {
-    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
+    publishToMavenCentral()
 }
