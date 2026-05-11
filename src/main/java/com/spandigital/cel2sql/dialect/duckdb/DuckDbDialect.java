@@ -204,17 +204,21 @@ public final class DuckDbDialect implements Dialect, IndexAdvisor {
     }
 
     @Override
-    public void writeJSONArrayMembership(StringBuilder w, String jsonFunc, SqlWriter writeExpr) throws ConversionException {
-        w.append("(SELECT value FROM json_each(");
-        writeExpr.write();
-        w.append("))");
+    public void writeJSONArrayMembership(StringBuilder w, String jsonFunc, SqlWriter writeElem, SqlWriter writeArray) throws ConversionException {
+        w.append("EXISTS (SELECT 1 FROM json_each(");
+        writeArray.write();
+        w.append(") WHERE value = ");
+        writeElem.write();
+        w.append(')');
     }
 
     @Override
-    public void writeNestedJSONArrayMembership(StringBuilder w, SqlWriter writeExpr) throws ConversionException {
-        w.append("(SELECT value FROM json_each(");
-        writeExpr.write();
-        w.append("))");
+    public void writeNestedJSONArrayMembership(StringBuilder w, SqlWriter writeElem, SqlWriter writeArray) throws ConversionException {
+        w.append("EXISTS (SELECT 1 FROM json_each(");
+        writeArray.write();
+        w.append(") WHERE value = ");
+        writeElem.write();
+        w.append(')');
     }
 
     // --- Timestamps ---

@@ -241,21 +241,21 @@ public final class SparkDialect implements Dialect, IndexAdvisor {
      * {@code array_contains(arr, elem)}, which works correctly.</p>
      */
     @Override
-    public void writeJSONArrayMembership(StringBuilder w, String jsonFunc, SqlWriter writeExpr) throws ConversionException {
-        throw ConversionException.of(
-                "Unsupported operation",
-                "Spark JSON array membership requires a boolean predicate (array_contains/EXISTS); "
-                        + "the dialect contract does not provide the candidate element to build one. "
-                        + "Use a typed ARRAY<T> column or rewrite the expression in application code.");
+    public void writeJSONArrayMembership(StringBuilder w, String jsonFunc, SqlWriter writeElem, SqlWriter writeArray) throws ConversionException {
+        w.append("array_contains(from_json(");
+        writeArray.write();
+        w.append(", 'ARRAY<STRING>'), ");
+        writeElem.write();
+        w.append(')');
     }
 
     @Override
-    public void writeNestedJSONArrayMembership(StringBuilder w, SqlWriter writeExpr) throws ConversionException {
-        throw ConversionException.of(
-                "Unsupported operation",
-                "Spark nested JSON array membership requires a boolean predicate (array_contains/EXISTS); "
-                        + "the dialect contract does not provide the candidate element to build one. "
-                        + "Use a typed ARRAY<T> column or rewrite the expression in application code.");
+    public void writeNestedJSONArrayMembership(StringBuilder w, SqlWriter writeElem, SqlWriter writeArray) throws ConversionException {
+        w.append("array_contains(from_json(");
+        writeArray.write();
+        w.append(", 'ARRAY<STRING>'), ");
+        writeElem.write();
+        w.append(')');
     }
 
     // --- Timestamps ---
