@@ -98,10 +98,10 @@ public interface Dialect {
     void writeJSONExtractPath(StringBuilder w, List<String> pathSegments, SqlWriter writeRoot) throws ConversionException;
 
     /** Writes a JSON array membership test for the IN operator. */
-    void writeJSONArrayMembership(StringBuilder w, String jsonFunc, SqlWriter writeExpr) throws ConversionException;
+    void writeJSONArrayMembership(StringBuilder w, String jsonFunc, SqlWriter writeElem, SqlWriter writeArray) throws ConversionException;
 
     /** Writes a nested JSON array membership test. */
-    void writeNestedJSONArrayMembership(StringBuilder w, SqlWriter writeExpr) throws ConversionException;
+    void writeNestedJSONArrayMembership(StringBuilder w, SqlWriter writeElem, SqlWriter writeArray) throws ConversionException;
 
     // --- Timestamps ---
 

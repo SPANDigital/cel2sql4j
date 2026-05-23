@@ -133,17 +133,15 @@ class Cel2SqlSparkTest {
     }
 
     @Test
-    void jsonArrayMembershipThrowsClearly() throws Exception {
-        // A scalar subquery built from EXPLODE(from_json(...)) can return multiple
-        // rows, which Spark rejects at runtime. The dialect throws at conversion
-        // time so users get a clear diagnostic instead of an opaque runtime error.
+    void jsonArrayMembershipEmitsArrayContains() throws Exception {
         SparkDialect spark = new SparkDialect();
         StringBuilder sb = new StringBuilder();
-        assertThatThrownBy(() -> spark.writeJSONArrayMembership(sb, "any", () -> sb.append("x")))
-                .isInstanceOf(ConversionException.class);
+        spark.writeJSONArrayMembership(sb, "any", () -> sb.append("elem"), () -> sb.append("arr"));
+        assertThat(sb.toString()).isEqualTo("array_contains(from_json(arr, 'ARRAY<STRING>'), elem)");
+
         StringBuilder sb2 = new StringBuilder();
-        assertThatThrownBy(() -> spark.writeNestedJSONArrayMembership(sb2, () -> sb2.append("x")))
-                .isInstanceOf(ConversionException.class);
+        spark.writeNestedJSONArrayMembership(sb2, () -> sb2.append("elem"), () -> sb2.append("arr"));
+        assertThat(sb2.toString()).isEqualTo("array_contains(from_json(arr, 'ARRAY<STRING>'), elem)");
     }
 
     static Stream<Arguments> sparkInListTests() {

@@ -1181,18 +1181,14 @@ class Converter {
             if (fieldSchema != null) {
                 boolean isJSONB = fieldSchema.isJSONB();
                 String jsonFunc = getJSONArrayFunction(isJSONB, true);
-                visit(elem);
-                str.append(" = ");
-                dialect.writeJSONArrayMembership(str, jsonFunc, () -> visit(collection));
+                dialect.writeJSONArrayMembership(str, jsonFunc, () -> visit(elem), () -> visit(collection));
                 return;
             }
         }
 
         // If no schema found, try nested JSON access
         if (isNestedJSONAccess(collection)) {
-            visit(elem);
-            str.append(" = ");
-            dialect.writeNestedJSONArrayMembership(str, () -> visit(collection));
+            dialect.writeNestedJSONArrayMembership(str, () -> visit(elem), () -> visit(collection));
             return;
         }
 

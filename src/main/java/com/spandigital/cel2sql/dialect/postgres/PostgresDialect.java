@@ -212,16 +212,18 @@ public final class PostgresDialect implements Dialect, IndexAdvisor {
     }
 
     @Override
-    public void writeJSONArrayMembership(StringBuilder w, String jsonFunc, SqlWriter writeExpr) throws ConversionException {
-        w.append("ANY(ARRAY(SELECT ").append(jsonFunc).append('(');
-        writeExpr.write();
+    public void writeJSONArrayMembership(StringBuilder w, String jsonFunc, SqlWriter writeElem, SqlWriter writeArray) throws ConversionException {
+        writeElem.write();
+        w.append(" = ANY(ARRAY(SELECT ").append(jsonFunc).append('(');
+        writeArray.write();
         w.append(")))");
     }
 
     @Override
-    public void writeNestedJSONArrayMembership(StringBuilder w, SqlWriter writeExpr) throws ConversionException {
-        w.append("ANY(ARRAY(SELECT jsonb_array_elements_text(");
-        writeExpr.write();
+    public void writeNestedJSONArrayMembership(StringBuilder w, SqlWriter writeElem, SqlWriter writeArray) throws ConversionException {
+        writeElem.write();
+        w.append(" = ANY(ARRAY(SELECT jsonb_array_elements_text(");
+        writeArray.write();
         w.append(")))");
     }
 

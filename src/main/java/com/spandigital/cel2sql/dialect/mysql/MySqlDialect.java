@@ -204,17 +204,21 @@ public final class MySqlDialect implements Dialect, IndexAdvisor {
     }
 
     @Override
-    public void writeJSONArrayMembership(StringBuilder w, String jsonFunc, SqlWriter writeExpr) throws ConversionException {
-        w.append("JSON_CONTAINS(");
-        writeExpr.write();
-        w.append(", CAST(? AS JSON))");
+    public void writeJSONArrayMembership(StringBuilder w, String jsonFunc, SqlWriter writeElem, SqlWriter writeArray) throws ConversionException {
+        w.append("JSON_OVERLAPS(JSON_ARRAY(");
+        writeElem.write();
+        w.append("), ");
+        writeArray.write();
+        w.append(')');
     }
 
     @Override
-    public void writeNestedJSONArrayMembership(StringBuilder w, SqlWriter writeExpr) throws ConversionException {
-        w.append("JSON_CONTAINS(");
-        writeExpr.write();
-        w.append(", CAST(? AS JSON))");
+    public void writeNestedJSONArrayMembership(StringBuilder w, SqlWriter writeElem, SqlWriter writeArray) throws ConversionException {
+        w.append("JSON_OVERLAPS(JSON_ARRAY(");
+        writeElem.write();
+        w.append("), ");
+        writeArray.write();
+        w.append(')');
     }
 
     // --- Timestamps ---
