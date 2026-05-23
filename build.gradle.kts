@@ -38,7 +38,7 @@ dependencies {
     testImplementation("org.assertj:assertj-core:3.27.7")
     testRuntimeOnly("org.slf4j:slf4j-simple:2.0.18")
 
-    "integrationTestImplementation"(platform("org.testcontainers:testcontainers-bom:1.20.4"))
+    "integrationTestImplementation"(platform("org.testcontainers:testcontainers-bom:2.0.5"))
     "integrationTestImplementation"("org.testcontainers:junit-jupiter")
     "integrationTestImplementation"("org.testcontainers:postgresql")
     "integrationTestImplementation"("org.testcontainers:mysql")
