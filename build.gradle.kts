@@ -39,19 +39,13 @@ dependencies {
     testRuntimeOnly("org.slf4j:slf4j-simple:2.0.18")
 
     "integrationTestImplementation"(platform("org.testcontainers:testcontainers-bom:2.0.5"))
-    "integrationTestImplementation"("org.testcontainers:junit-jupiter")
-    "integrationTestImplementation"("org.testcontainers:postgresql")
-    "integrationTestImplementation"("org.testcontainers:mysql")
+    "integrationTestImplementation"("org.testcontainers:testcontainers-junit-jupiter")
+    "integrationTestImplementation"("org.testcontainers:testcontainers-postgresql")
+    "integrationTestImplementation"("org.testcontainers:testcontainers-mysql")
     "integrationTestImplementation"("org.postgresql:postgresql:42.7.11")
     "integrationTestImplementation"("com.mysql:mysql-connector-j:9.7.0")
     "integrationTestImplementation"("org.xerial:sqlite-jdbc:3.53.1.0")
     "integrationTestImplementation"("org.duckdb:duckdb_jdbc:1.5.2.1")
-
-    constraints {
-        "integrationTestImplementation"("org.apache.commons:commons-compress:1.28.0") {
-            because("CVE-2024-25710 / CVE-2024-26308 — testcontainers 1.20.4 pulls 1.24.0; patched in 1.26.0")
-        }
-    }
 }
 
 tasks.test {
