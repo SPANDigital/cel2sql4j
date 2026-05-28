@@ -45,7 +45,7 @@ dependencies {
     "integrationTestImplementation"("org.postgresql:postgresql:42.7.11")
     "integrationTestImplementation"("com.mysql:mysql-connector-j:9.7.0")
     "integrationTestImplementation"("org.xerial:sqlite-jdbc:3.53.1.0")
-    "integrationTestImplementation"("org.duckdb:duckdb_jdbc:1.5.2.1")
+    "integrationTestImplementation"("org.duckdb:duckdb_jdbc:1.5.3.0")
 }
 
 tasks.test {
