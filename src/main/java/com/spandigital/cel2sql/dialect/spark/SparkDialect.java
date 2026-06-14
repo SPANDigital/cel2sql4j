@@ -7,6 +7,7 @@ import com.spandigital.cel2sql.dialect.IndexPattern;
 import com.spandigital.cel2sql.dialect.IndexRecommendation;
 import com.spandigital.cel2sql.dialect.PatternType;
 import com.spandigital.cel2sql.dialect.RegexResult;
+import com.spandigital.cel2sql.dialect.SqlEmitters;
 import com.spandigital.cel2sql.dialect.SqlWriter;
 import com.spandigital.cel2sql.error.ConversionException;
 
@@ -80,11 +81,7 @@ public final class SparkDialect implements Dialect, IndexAdvisor {
     public void writeRegexMatch(StringBuilder w, SqlWriter writeTarget, String pattern, boolean caseInsensitive) throws ConversionException {
         // Spark regex uses Java pattern syntax; (?i) inline flag is honoured by the
         // engine, so caseInsensitive is folded into the pattern by SparkRegex.
-        writeTarget.write();
-        w.append(" RLIKE '");
-        String escaped = pattern.replace("'", "''");
-        w.append(escaped);
-        w.append('\'');
+        SqlEmitters.writeInfixRegex(w, writeTarget, " RLIKE ", pattern);
     }
 
     @Override
@@ -215,13 +212,7 @@ public final class SparkDialect implements Dialect, IndexAdvisor {
 
     @Override
     public void writeJSONExtractPath(StringBuilder w, List<String> pathSegments, SqlWriter writeRoot) throws ConversionException {
-        w.append("get_json_object(");
-        writeRoot.write();
-        w.append(", '$");
-        for (String segment : pathSegments) {
-            w.append('.').append(escapeJSONFieldName(segment));
-        }
-        w.append("') IS NOT NULL");
+        SqlEmitters.writeJsonPathProbe(w, "get_json_object", writeRoot, pathSegments, " IS NOT NULL", SparkDialect::escapeJSONFieldName);
     }
 
     /**
@@ -286,13 +277,7 @@ public final class SparkDialect implements Dialect, IndexAdvisor {
             w.append(") - 1)");
             return;
         }
-        w.append("EXTRACT(").append(part).append(" FROM ");
-        writeExpr.write();
-        if (writeTZ != null) {
-            w.append(" AT TIME ZONE ");
-            writeTZ.write();
-        }
-        w.append(')');
+        SqlEmitters.writeStandardExtract(w, part, writeExpr, writeTZ);
     }
 
     @Override
@@ -316,11 +301,7 @@ public final class SparkDialect implements Dialect, IndexAdvisor {
 
     @Override
     public void writeSplit(StringBuilder w, SqlWriter writeStr, SqlWriter writeDelim) throws ConversionException {
-        w.append("split(");
-        writeStr.write();
-        w.append(", ");
-        writeDelim.write();
-        w.append(')');
+        SqlEmitters.writeBinaryCall(w, "split", writeStr, writeDelim);
     }
 
     @Override
@@ -335,15 +316,7 @@ public final class SparkDialect implements Dialect, IndexAdvisor {
 
     @Override
     public void writeJoin(StringBuilder w, SqlWriter writeArray, SqlWriter writeDelim) throws ConversionException {
-        w.append("array_join(");
-        writeArray.write();
-        w.append(", ");
-        if (writeDelim != null) {
-            writeDelim.write();
-        } else {
-            w.append("''");
-        }
-        w.append(')');
+        SqlEmitters.writeArrayJoin(w, "array_join", writeArray, writeDelim, false);
     }
 
     @Override

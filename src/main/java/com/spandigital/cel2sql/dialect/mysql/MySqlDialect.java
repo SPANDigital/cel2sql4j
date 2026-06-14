@@ -7,6 +7,7 @@ import com.spandigital.cel2sql.dialect.IndexPattern;
 import com.spandigital.cel2sql.dialect.IndexRecommendation;
 import com.spandigital.cel2sql.dialect.PatternType;
 import com.spandigital.cel2sql.dialect.RegexResult;
+import com.spandigital.cel2sql.dialect.SqlEmitters;
 import com.spandigital.cel2sql.dialect.SqlWriter;
 import com.spandigital.cel2sql.error.ConversionException;
 
@@ -63,10 +64,7 @@ public final class MySqlDialect implements Dialect, IndexAdvisor {
 
     @Override
     public void writeRegexMatch(StringBuilder w, SqlWriter writeTarget, String pattern, boolean caseInsensitive) throws ConversionException {
-        writeTarget.write();
-        w.append(" REGEXP ");
-        String escaped = pattern.replace("'", "''");
-        w.append('\'').append(escaped).append('\'');
+        SqlEmitters.writeInfixRegex(w, writeTarget, " REGEXP ", pattern);
     }
 
     @Override
@@ -247,13 +245,7 @@ public final class MySqlDialect implements Dialect, IndexAdvisor {
             }
             w.append(") + 5) % 7");
         } else {
-            w.append("EXTRACT(").append(part).append(" FROM ");
-            writeExpr.write();
-            if (writeTZ != null) {
-                w.append(" AT TIME ZONE ");
-                writeTZ.write();
-            }
-            w.append(')');
+            SqlEmitters.writeStandardExtract(w, part, writeExpr, writeTZ);
         }
     }
 

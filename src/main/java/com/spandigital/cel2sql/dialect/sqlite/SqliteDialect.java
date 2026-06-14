@@ -7,6 +7,7 @@ import com.spandigital.cel2sql.dialect.IndexPattern;
 import com.spandigital.cel2sql.dialect.IndexRecommendation;
 import com.spandigital.cel2sql.dialect.PatternType;
 import com.spandigital.cel2sql.dialect.RegexResult;
+import com.spandigital.cel2sql.dialect.SqlEmitters;
 import com.spandigital.cel2sql.dialect.SqlWriter;
 import com.spandigital.cel2sql.error.ConversionException;
 
@@ -185,31 +186,17 @@ public final class SqliteDialect implements Dialect, IndexAdvisor {
 
     @Override
     public void writeJSONExtractPath(StringBuilder w, List<String> pathSegments, SqlWriter writeRoot) throws ConversionException {
-        w.append("json_type(");
-        writeRoot.write();
-        w.append(", '$");
-        for (String segment : pathSegments) {
-            w.append('.').append(escapeJSONFieldName(segment));
-        }
-        w.append("') IS NOT NULL");
+        SqlEmitters.writeJsonPathProbe(w, "json_type", writeRoot, pathSegments, " IS NOT NULL", SqliteDialect::escapeJSONFieldName);
     }
 
     @Override
     public void writeJSONArrayMembership(StringBuilder w, String jsonFunc, SqlWriter writeElem, SqlWriter writeArray) throws ConversionException {
-        w.append("EXISTS (SELECT 1 FROM json_each(");
-        writeArray.write();
-        w.append(") WHERE value = ");
-        writeElem.write();
-        w.append(')');
+        SqlEmitters.writeJsonEachMembership(w, writeArray, writeElem);
     }
 
     @Override
     public void writeNestedJSONArrayMembership(StringBuilder w, SqlWriter writeElem, SqlWriter writeArray) throws ConversionException {
-        w.append("EXISTS (SELECT 1 FROM json_each(");
-        writeArray.write();
-        w.append(") WHERE value = ");
-        writeElem.write();
-        w.append(')');
+        SqlEmitters.writeJsonEachMembership(w, writeArray, writeElem);
     }
 
     // --- Timestamps ---
