@@ -7,6 +7,7 @@ import com.spandigital.cel2sql.dialect.IndexPattern;
 import com.spandigital.cel2sql.dialect.IndexRecommendation;
 import com.spandigital.cel2sql.dialect.PatternType;
 import com.spandigital.cel2sql.dialect.RegexResult;
+import com.spandigital.cel2sql.dialect.SqlEmitters;
 import com.spandigital.cel2sql.dialect.SqlWriter;
 import com.spandigital.cel2sql.error.ConversionException;
 
@@ -195,13 +196,7 @@ public final class BigQueryDialect implements Dialect, IndexAdvisor {
 
     @Override
     public void writeJSONExtractPath(StringBuilder w, List<String> pathSegments, SqlWriter writeRoot) throws ConversionException {
-        w.append("JSON_VALUE(");
-        writeRoot.write();
-        w.append(", '$");
-        for (String segment : pathSegments) {
-            w.append('.').append(escapeJSONFieldName(segment));
-        }
-        w.append("') IS NOT NULL");
+        SqlEmitters.writeJsonPathProbe(w, "JSON_VALUE", writeRoot, pathSegments, " IS NOT NULL", BigQueryDialect::escapeJSONFieldName);
     }
 
     @Override
@@ -246,13 +241,7 @@ public final class BigQueryDialect implements Dialect, IndexAdvisor {
             }
             w.append(") - 1)");
         } else {
-            w.append("EXTRACT(").append(part).append(" FROM ");
-            writeExpr.write();
-            if (writeTZ != null) {
-                w.append(" AT TIME ZONE ");
-                writeTZ.write();
-            }
-            w.append(')');
+            SqlEmitters.writeStandardExtract(w, part, writeExpr, writeTZ);
         }
     }
 
@@ -282,11 +271,7 @@ public final class BigQueryDialect implements Dialect, IndexAdvisor {
 
     @Override
     public void writeSplit(StringBuilder w, SqlWriter writeStr, SqlWriter writeDelim) throws ConversionException {
-        w.append("SPLIT(");
-        writeStr.write();
-        w.append(", ");
-        writeDelim.write();
-        w.append(')');
+        SqlEmitters.writeBinaryCall(w, "SPLIT", writeStr, writeDelim);
     }
 
     @Override
@@ -300,15 +285,7 @@ public final class BigQueryDialect implements Dialect, IndexAdvisor {
 
     @Override
     public void writeJoin(StringBuilder w, SqlWriter writeArray, SqlWriter writeDelim) throws ConversionException {
-        w.append("ARRAY_TO_STRING(");
-        writeArray.write();
-        w.append(", ");
-        if (writeDelim != null) {
-            writeDelim.write();
-        } else {
-            w.append("''");
-        }
-        w.append(')');
+        SqlEmitters.writeArrayJoin(w, "ARRAY_TO_STRING", writeArray, writeDelim, false);
     }
 
     @Override

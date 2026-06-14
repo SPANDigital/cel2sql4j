@@ -1,6 +1,7 @@
 package com.spandigital.cel2sql.dialect.mysql;
 
 import com.spandigital.cel2sql.dialect.RegexResult;
+import com.spandigital.cel2sql.dialect.RegexSafety;
 import com.spandigital.cel2sql.error.ConversionException;
 
 import java.util.regex.Pattern;
@@ -13,18 +14,6 @@ import java.util.regex.PatternSyntaxException;
  * <p>Ported from the Go {@code dialect/mysql/regex.go} implementation.</p>
  */
 final class MySqlRegex {
-
-    /** Maximum allowed regex pattern length. */
-    static final int MAX_PATTERN_LENGTH = 500;
-
-    /** Maximum allowed capture groups in a pattern. */
-    static final int MAX_GROUPS = 20;
-
-    /** Maximum allowed nesting depth of parenthesized groups. */
-    static final int MAX_NESTING_DEPTH = 10;
-
-    private static final Pattern NESTED_QUANTIFIERS = Pattern.compile("[*+][*+]");
-    private static final Pattern QUANTIFIED_ALTERNATION = Pattern.compile("\\([^)]*\\|[^)]*\\)[*+]");
 
     private MySqlRegex() {
     }
@@ -56,12 +45,7 @@ final class MySqlRegex {
      */
     static RegexResult convertRE2ToMySQL(String re2Pattern) throws ConversionException {
         // 1. Check pattern length
-        if (re2Pattern.length() > MAX_PATTERN_LENGTH) {
-            throw ConversionException.of(
-                    "Invalid regex pattern",
-                    String.format("pattern length %d exceeds limit of %d characters",
-                            re2Pattern.length(), MAX_PATTERN_LENGTH));
-        }
+        RegexSafety.checkLength(re2Pattern);
 
         // 2. Validate pattern compiles
         try {
@@ -89,39 +73,9 @@ final class MySqlRegex {
                     "named capture groups (?P<name>...) are not supported in MySQL regex");
         }
 
-        // 4. Detect catastrophic nested quantifiers
-        if (NESTED_QUANTIFIERS.matcher(re2Pattern).find()) {
-            throw ConversionException.of(
-                    "Invalid regex pattern",
-                    "regex contains catastrophic nested quantifiers that could cause ReDoS");
-        }
-
-        // 5. Check nested quantifiers in groups
-        validateNoNestedQuantifiers(re2Pattern);
-
-        // 6. Count and limit capture groups
-        int groupCount = countUnescapedParens(re2Pattern);
-        if (groupCount > MAX_GROUPS) {
-            throw ConversionException.of(
-                    "Invalid regex pattern",
-                    String.format("regex contains %d capture groups, exceeds limit of %d",
-                            groupCount, MAX_GROUPS));
-        }
-
-        // 7. Detect exponential alternation patterns
-        if (QUANTIFIED_ALTERNATION.matcher(re2Pattern).find()) {
-            throw ConversionException.of(
-                    "Invalid regex pattern",
-                    "regex contains quantified alternation that could cause ReDoS");
-        }
-
-        // 8. Check nesting depth
-        int maxDepth = computeMaxNestingDepth(re2Pattern);
-        if (maxDepth > MAX_NESTING_DEPTH) {
-            throw ConversionException.of(
-                    "Invalid regex pattern",
-                    String.format("nesting depth %d exceeds limit of %d", maxDepth, MAX_NESTING_DEPTH));
-        }
+        // 4-8. Shared ReDoS safety checks (nested quantifiers, group count,
+        //      quantified alternation, nesting depth)
+        RegexSafety.checkReDoS(re2Pattern);
 
         // 9. Handle (?i) flag -> set caseInsensitive=true, strip prefix
         boolean caseInsensitive = false;
@@ -145,98 +99,5 @@ final class MySqlRegex {
 
         // 13. Return result
         return new RegexResult(pattern, caseInsensitive);
-    }
-
-    /**
-     * Validates that no quantified groups contain inner quantifiers (nested quantifiers).
-     * This detects patterns like {@code (a+)+} that can cause catastrophic backtracking.
-     */
-    private static void validateNoNestedQuantifiers(String pattern) throws ConversionException {
-        int depth = 0;
-        boolean[] groupHasQuantifier = new boolean[pattern.length()]; // oversized but safe
-        int stackTop = -1;
-
-        for (int i = 0; i < pattern.length(); i++) {
-            char ch = pattern.charAt(i);
-
-            // Skip escaped characters
-            if (i > 0 && pattern.charAt(i - 1) == '\\') {
-                continue;
-            }
-
-            switch (ch) {
-                case '(' -> {
-                    depth++;
-                    stackTop++;
-                    groupHasQuantifier[stackTop] = false;
-                }
-                case ')' -> {
-                    if (depth > 0) {
-                        depth--;
-                        if (i + 1 < pattern.length()) {
-                            char next = pattern.charAt(i + 1);
-                            if (next == '*' || next == '+' || next == '?' || next == '{') {
-                                if (stackTop >= 0 && groupHasQuantifier[stackTop]) {
-                                    throw ConversionException.of(
-                                            "Invalid regex pattern",
-                                            "regex contains catastrophic nested quantifiers that could cause ReDoS");
-                                }
-                            }
-                        }
-                        if (stackTop > 0) {
-                            if (groupHasQuantifier[stackTop]) {
-                                groupHasQuantifier[stackTop - 1] = true;
-                            }
-                        }
-                        if (stackTop >= 0) {
-                            stackTop--;
-                        }
-                    }
-                }
-                case '*', '+', '?' -> {
-                    if (stackTop >= 0) {
-                        groupHasQuantifier[stackTop] = true;
-                    }
-                }
-                case '{' -> {
-                    if (stackTop >= 0) {
-                        groupHasQuantifier[stackTop] = true;
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Counts the number of unescaped opening parentheses in the pattern.
-     */
-    private static int countUnescapedParens(String pattern) {
-        int count = 0;
-        for (int i = 0; i < pattern.length(); i++) {
-            if (pattern.charAt(i) == '(' && (i == 0 || pattern.charAt(i - 1) != '\\')) {
-                count++;
-            }
-        }
-        return count;
-    }
-
-    /**
-     * Computes the maximum nesting depth of parenthesized groups in the pattern.
-     */
-    private static int computeMaxNestingDepth(String pattern) {
-        int maxDepth = 0;
-        int currentDepth = 0;
-        for (int i = 0; i < pattern.length(); i++) {
-            char ch = pattern.charAt(i);
-            if (ch == '(' && (i == 0 || pattern.charAt(i - 1) != '\\')) {
-                currentDepth++;
-                if (currentDepth > maxDepth) {
-                    maxDepth = currentDepth;
-                }
-            } else if (ch == ')' && (i == 0 || pattern.charAt(i - 1) != '\\')) {
-                currentDepth--;
-            }
-        }
-        return maxDepth;
     }
 }
