@@ -27,9 +27,9 @@ configurations["integrationTestImplementation"].extendsFrom(configurations.testI
 configurations["integrationTestRuntimeOnly"].extendsFrom(configurations.testRuntimeOnly.get())
 
 dependencies {
-    api("dev.cel:cel:0.13.0")
-    api("dev.cel:compiler:0.13.0")
-    api("dev.cel:runtime:0.13.0")
+    api("dev.cel:cel:0.13.1")
+    api("dev.cel:compiler:0.13.1")
+    api("dev.cel:runtime:0.13.1")
     implementation("com.google.guava:guava:33.6.0-jre")
     implementation("org.slf4j:slf4j-api:2.0.18")
 
